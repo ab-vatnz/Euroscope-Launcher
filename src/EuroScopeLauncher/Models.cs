@@ -6,6 +6,7 @@ public sealed class LauncherSettings
     public string? AiracVersion { get; set; }
     public string? AiracSourceUrl { get; set; }
     public DateTimeOffset? AiracInstalledAt { get; set; }
+    public bool SetupWizardCompleted { get; set; }
     public Dictionary<string, string> InstalledPlugins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 

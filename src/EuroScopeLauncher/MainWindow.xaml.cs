@@ -22,8 +22,20 @@ public partial class MainWindow : Window
     {
         _settings = await _settingsStore.LoadAsync();
         EuroScopePathBox.Text = _settings.EuroScopeExePath;
+        VersionText.Text = $"Version {typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "1.0.0"}";
         UpdateAiracStatus();
-        AppUpdateText.Text = "Checks GitHub Releases for a newer launcher version. Updates are never installed without your confirmation.";
+        if (!_settings.SetupWizardCompleted)
+        {
+            var wizard = new SetupWizard(_settings.EuroScopeExePath) { Owner = this };
+            if (wizard.ShowDialog() == true)
+            {
+                _settings.EuroScopeExePath = wizard.EuroScopePath;
+                _settings.SetupWizardCompleted = true;
+                EuroScopePathBox.Text = wizard.EuroScopePath;
+                await _settingsStore.SaveAsync(_settings);
+                UpdateAiracStatus();
+            }
+        }
         try { await CheckAppUpdateAsync(silent: true); } catch { /* A network error must not block controller setup. */ }
     }
 
@@ -33,6 +45,18 @@ public partial class MainWindow : Window
         var legacy = _airac.FindLegacySkylineFolders(_settings.EuroScopeExePath);
         AiracStatusText.Text = $"Managed AIRAC folder: {airac}\nInstalled AIRAC: {_settings.AiracVersion ?? "not installed"}." +
             (legacy.Count > 0 ? $"\nLegacy SkyLine package found: {string.Join(", ", legacy.Select(Path.GetFileName))}. Back it up, then move its Settings folder and any other controller-specific files you want to keep into AIRAC before setup. The launcher will never replace or update AIRAC\\Settings, and it will not remove the old package." : "");
+        var version = _settings.AiracVersion ?? "Not installed";
+        HomeAiracText.Text = $"AIRAC {version}";
+        ProfileVersionText.Text = version;
+    }
+
+    private void Nav_Click(object sender, RoutedEventArgs e)
+    {
+        var page = (sender as FrameworkElement)?.Tag?.ToString();
+        HomeView.Visibility = page == "Home" ? Visibility.Visible : Visibility.Collapsed;
+        ProfilesView.Visibility = page == "Profiles" ? Visibility.Visible : Visibility.Collapsed;
+        PluginsView.Visibility = page == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
+        SetupView.Visibility = page == "Setup" ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private async void Browse_Click(object sender, RoutedEventArgs e)
@@ -183,10 +207,10 @@ public partial class MainWindow : Window
     {
         await RunAsync("Checking launcher updates…", async () =>
         {
-            var release = await new GitHubService(_http).GetLatestReleaseAsync("https://api.github.com/repos/ab-vatnz/EuroScopeLauncher/releases/latest");
+            var release = await new GitHubService(_http).GetLatestReleaseAsync("https://api.github.com/repos/ab-vatnz/Euroscope-Launcher/releases/latest");
             var current = typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
             if (release.TagName.TrimStart('v').Equals(current, StringComparison.OrdinalIgnoreCase)) { if (!silent) MessageBox.Show("The launcher is current."); return; }
-            AppUpdateText.Text = $"Update available: {release.Name}\n\n{release.Body}";
+            StatusText.Text = $"Launcher update available: {release.Name}";
             if (MessageBox.Show($"Launcher update {release.Name} is available. Download its installer now?", "Launcher update", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
             {
                 var installer = release.Assets.FirstOrDefault(a => a.Name.EndsWith("-Setup.exe", StringComparison.OrdinalIgnoreCase));

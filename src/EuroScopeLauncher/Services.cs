@@ -138,7 +138,7 @@ public sealed class GitHubService(HttpClient http)
 
 public sealed class PluginService(HttpClient http, GitHubService github)
 {
-    public const string CatalogUrl = "https://raw.githubusercontent.com/ab-vatnz/EuroScopeLauncher/main/plugin-catalog.json";
+    public const string CatalogUrl = "https://raw.githubusercontent.com/ab-vatnz/Euroscope-Launcher/main/plugin-catalog.json";
     public async Task<PluginCatalog> GetCatalogAsync(CancellationToken cancellationToken = default)
     {
         try
