@@ -49,6 +49,18 @@ public partial class MainWindow : Window
     {
         if (!EnsureEuroScopeExists()) return;
         var airacDirectory = AiracService.GetAiracDirectory(_settings.EuroScopeExePath);
+        var legacyFolders = _airac.FindLegacySkylineFolders(_settings.EuroScopeExePath);
+        if (!Directory.Exists(airacDirectory) && legacyFolders.Count > 0)
+        {
+            await RunAsync("Preparing AIRAC migration folder…", () =>
+            {
+                Directory.CreateDirectory(airacDirectory);
+                MessageBox.Show($"AIRAC has been created at:\n{airacDirectory}\n\nBefore continuing, back up your old SkyLine package and move its Settings folder plus any controller-specific files you want to retain into AIRAC. Click First-time SkyLine setup again afterwards; the launcher will preserve those files and only install current sector files.", "Move your controller settings", MessageBoxButton.OK, MessageBoxImage.Information);
+                UpdateAiracStatus();
+                return Task.CompletedTask;
+            });
+            return;
+        }
         if (Directory.Exists(airacDirectory) && Directory.EnumerateFileSystemEntries(airacDirectory).Any())
         {
             await RunAsync("Updating migrated AIRAC files…", async () =>
