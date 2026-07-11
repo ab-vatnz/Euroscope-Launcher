@@ -16,7 +16,7 @@ OutputBaseFilename=EuroScopeLauncher-Setup
 SetupIconFile=..\assets\EuroScope.ico
 Compression=lzma
 SolidCompression=yes
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
 
 [Files]
 Source: "..\src\EuroScopeLauncher\bin\Release\net8.0-windows\win-x64\publish\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
