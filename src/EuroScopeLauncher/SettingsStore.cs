@@ -5,7 +5,9 @@ namespace EuroScopeLauncher;
 public sealed class SettingsStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-    private readonly string _path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EuroScopeLauncher", "settings.json");
+    // The launcher always runs elevated so ProgramData keeps one consistent setup state,
+    // rather than creating separate state under whichever Windows account supplied UAC.
+    private readonly string _path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "EuroScopeLauncher", "settings.json");
 
     public async Task<LauncherSettings> LoadAsync()
     {

@@ -10,7 +10,7 @@ Windows launcher for the VATNZ EuroScope package. It manages a single shared `AI
 4. Select **First-time SkyLine setup**. For an empty AIRAC folder it downloads the current VATNZ SkyLine package and asks whether to copy its `VATNZ.prf`. If you have already migrated files into AIRAC, it preserves them and installs only the current SCT2, ESE, and RWY files.
 5. In EuroScope, select the SCT2 file from `AIRAC` before connecting.
 
-EuroScope Launcher always requests administrator permission when it starts. This allows AIRAC and plugin updates under `Program Files` to work reliably.
+EuroScope Launcher always requests administrator permission when it starts. This allows AIRAC and plugin updates under `Program Files` to work reliably. Its machine-wide setup state is stored in `%ProgramData%\EuroScopeLauncher`, so elevation never creates a separate profile for the account that supplied the UAC prompt.
 
 ## AIRAC updates
 
