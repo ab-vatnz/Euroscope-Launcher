@@ -44,6 +44,7 @@ public partial class MainWindow : Window
             }
         }
         await LoadPluginsAsync(showErrors: false);
+        await RefreshProfileAvailabilityAsync();
         _pluginRefreshTimer.Start();
         try { await CheckAppUpdateAsync(silent: true); } catch { /* A network error must not block controller setup. */ }
     }
@@ -77,7 +78,7 @@ public partial class MainWindow : Window
             (legacy.Count > 0 ? $"\nLegacy SkyLine package found: {string.Join(", ", legacy.Select(Path.GetFileName))}. Back it up, then move its Settings folder and any other controller-specific files you want to keep into AIRAC before setup. The launcher will never replace or update AIRAC\\Settings, and it will not remove the old package." : "");
         var version = _settings.AiracVersion ?? "Not installed";
         HomeAiracText.Text = $"AIRAC {version}";
-        ProfileVersionText.Text = version;
+        ProfileVersionText.Text = $"Installed\n{version}";
     }
 
     private async void Nav_Click(object sender, RoutedEventArgs e)
@@ -142,6 +143,7 @@ public partial class MainWindow : Window
             finally { File.Delete(zip); }
             await _settingsStore.SaveAsync(_settings);
             UpdateAiracStatus();
+            await RefreshProfileAvailabilityAsync();
             MessageBox.Show("SkyLine setup is complete. Before launching EuroScope, select the SCT2 file in the AIRAC folder.", "Setup complete", MessageBoxButton.OK, MessageBoxImage.Information);
         });
     }
@@ -164,6 +166,7 @@ public partial class MainWindow : Window
             finally { File.Delete(zip); }
             await _settingsStore.SaveAsync(_settings);
             UpdateAiracStatus();
+            await RefreshProfileAvailabilityAsync();
             MessageBox.Show("AIRAC updated. Select the new SCT2 file from AIRAC in EuroScope before launching.", "AIRAC updated", MessageBoxButton.OK, MessageBoxImage.Information);
         });
     }
@@ -181,6 +184,7 @@ public partial class MainWindow : Window
         {
             var dll = await new PluginService(_http, new GitHubService(_http)).InstallAsync(plugin, AiracService.GetAiracDirectory(_settings.EuroScopeExePath), _settings);
             await _settingsStore.SaveAsync(_settings);
+            await RefreshPluginRowsAsync();
             MessageBox.Show($"{plugin.DisplayName} is installed.\n\nOpen EuroScope → Other SET → Plug-ins, load and enable:\n{dll}\n\n{plugin.PostInstallInstructions}", "Enable plugin", MessageBoxButton.OK, MessageBoxImage.Information);
         });
     }
@@ -208,7 +212,13 @@ public partial class MainWindow : Window
             _settings.InstalledPlugins.TryGetValue(plugin.Id, out var installed);
             string latest;
             try { latest = (await github.GetLatestReleaseAsync(plugin.ReleaseApiUrl)).TagName; } catch { latest = "Unable to check"; }
-            rows.Add(new PluginRow { Definition = plugin, InstalledVersion = installed ?? "Not installed", LatestVersion = latest, InstallAction = installed is null ? "Install" : "Update" });
+            rows.Add(new PluginRow
+            {
+                Definition = plugin,
+                InstalledVersion = installed ?? "Not installed",
+                LatestVersion = latest,
+                InstallAction = installed is null ? "Install" : installed.Equals(latest, StringComparison.OrdinalIgnoreCase) ? "Current" : "Update"
+            });
         }
         PluginList.ItemsSource = rows;
     }
@@ -227,6 +237,22 @@ public partial class MainWindow : Window
         {
             StatusText.Text = "Plugin refresh unavailable.";
             if (showErrors) MessageBox.Show(ex.Message, "Plugin refresh", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private async Task RefreshProfileAvailabilityAsync()
+    {
+        try
+        {
+            var latest = await new VatnzService(_http).GetCurrentPackageAsync(skyline: false);
+            var installed = _settings.AiracVersion;
+            ProfileVersionText.Text = $"Installed\n{installed ?? "None"}\nLatest\n{latest.Version}";
+            ProfileUpdateButton.IsEnabled = installed is null || !installed.Equals(latest.Version, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            // A failed version check must never prevent a manual update.
+            ProfileUpdateButton.IsEnabled = true;
         }
     }
 

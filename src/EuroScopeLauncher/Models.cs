@@ -39,6 +39,7 @@ public sealed class PluginRow
     public string LatestVersion { get; init; } = "Unknown";
     public string InstallAction { get; init; } = "Install";
     public bool IsInstalled => InstalledVersion != "Not installed";
+    public bool CanInstallOrUpdate => !IsInstalled || LatestVersion == "Unable to check" || !InstalledVersion.Equals(LatestVersion, StringComparison.OrdinalIgnoreCase);
 }
 
 public sealed record GitHubRelease(string TagName, string Name, string Body, IReadOnlyList<GitHubAsset> Assets);
