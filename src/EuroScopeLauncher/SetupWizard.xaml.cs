@@ -33,6 +33,15 @@ public partial class SetupWizard : Window
             if (!File.Exists(EuroScopePath)) { MessageBox.Show("Select a valid EuroScope.exe before continuing."); return; }
             Directory.CreateDirectory(AiracService.GetAiracDirectory(EuroScopePath));
         }
+        if (_step == 2)
+        {
+            var answer = MessageBox.Show(
+                "Have you copied your old Settings folder, VATNZ.prf (if used), and any personal files into AIRAC?\n\nChoosing No keeps you on this page so you can check first. EuroScope Launcher never deletes your old SkyLine folder or personal files.",
+                "Confirm controller settings migration",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (answer != MessageBoxResult.Yes) return;
+        }
         if (_step == 3) { DialogResult = true; return; }
         _step++;
         ShowStep();
