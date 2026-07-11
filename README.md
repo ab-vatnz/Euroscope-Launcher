@@ -14,11 +14,11 @@ Writing under `Program Files` requires elevation. If Windows denies access, reru
 
 ## AIRAC updates
 
-The launcher reads the current package from [VATNZ Sector Files](https://www.vatnz.net/airspace/sector_files/). After initial setup it only replaces `.sct2`, `.ese`, and `.rwy` files in `AIRAC`; it never alters `.prf`, plugin, settings, or other manually migrated files. `euroscopelauncher-airac.txt` beside `AIRAC` records the installed version and source.
+The launcher reads the current package from [VATNZ Sector Files](https://www.vatnz.net/airspace/sector_files/). During initial SkyLine setup, an existing `AIRAC\Settings` folder is retained. After initial setup it only replaces `.sct2`, `.ese`, and `.rwy` files in `AIRAC`; it never alters `.prf`, plugin, settings, or other manually migrated files. `euroscopelauncher-airac.txt` beside `AIRAC` records the installed version and source.
 
 ## Plugins
 
-The versioned [plugin catalog](plugin-catalog.json) controls the available plugins. Each entry declares its GitHub release API, ZIP-asset matcher, destination, primary DLL, and post-install guidance. The starter entry installs the complete OzStrips EuroScope release under `AIRAC\Plugins\OzStripsEuroScope`.
+The versioned [plugin catalog](plugin-catalog.json) controls the available plugins. Each entry declares its GitHub release API, ZIP-asset matcher, destination, primary DLL, and post-install guidance. The launcher lists installed and latest release versions, and has explicit **Install**, **Update**, and confirmed **Uninstall** actions. The starter entry installs the complete OzStrips EuroScope release under `AIRAC\Plugins\OzStripsEuroScope`.
 
 After installing a plugin, open **Other SET → Plug-ins** in EuroScope, load the displayed DLL, and enable it. For OzStrips, connect and enter `.ozstrips`.
 

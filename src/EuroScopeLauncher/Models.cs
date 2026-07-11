@@ -29,5 +29,16 @@ public sealed class PluginDefinition
     public string VersionStrategy { get; set; } = "github-release-tag";
 }
 
+public sealed class PluginRow
+{
+    public required PluginDefinition Definition { get; init; }
+    public string DisplayName => Definition.DisplayName;
+    public string PostInstallInstructions => Definition.PostInstallInstructions;
+    public string InstalledVersion { get; init; } = "Not installed";
+    public string LatestVersion { get; init; } = "Unknown";
+    public string InstallAction { get; init; } = "Install";
+    public bool IsInstalled => InstalledVersion != "Not installed";
+}
+
 public sealed record GitHubRelease(string TagName, string Name, string Body, IReadOnlyList<GitHubAsset> Assets);
 public sealed record GitHubAsset(string Name, Uri DownloadUri);

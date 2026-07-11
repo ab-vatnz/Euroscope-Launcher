@@ -65,6 +65,13 @@ public sealed class AiracService
                 var relative = Path.GetRelativePath(source, file);
                 if (!includeProfile && Path.GetExtension(file).Equals(".prf", StringComparison.OrdinalIgnoreCase)) continue;
                 var target = Path.Combine(airacDirectory, relative);
+                // A controller's Settings folder is never replaced once it exists.
+                if (relative.Equals("Settings", StringComparison.OrdinalIgnoreCase) ||
+                    relative.StartsWith("Settings" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    var existingSettings = Path.Combine(airacDirectory, "Settings");
+                    if (Directory.Exists(existingSettings)) continue;
+                }
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                 File.Copy(file, target, true);
             }
@@ -134,8 +141,17 @@ public sealed class PluginService(HttpClient http, GitHubService github)
     public const string CatalogUrl = "https://raw.githubusercontent.com/ab-vatnz/EuroScopeLauncher/main/plugin-catalog.json";
     public async Task<PluginCatalog> GetCatalogAsync(CancellationToken cancellationToken = default)
     {
-        var json = await http.GetStringAsync(CatalogUrl, cancellationToken);
-        return JsonSerializer.Deserialize<PluginCatalog>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidDataException("Plugin catalog is invalid.");
+        try
+        {
+            var json = await http.GetStringAsync(CatalogUrl, cancellationToken);
+            return DeserializeCatalog(json);
+        }
+        catch (HttpRequestException)
+        {
+            var bundled = Path.Combine(AppContext.BaseDirectory, "plugin-catalog.json");
+            if (!File.Exists(bundled)) throw;
+            return DeserializeCatalog(await File.ReadAllTextAsync(bundled, cancellationToken));
+        }
     }
 
     public async Task<string> InstallAsync(PluginDefinition plugin, string airacDirectory, LauncherSettings settings, CancellationToken cancellationToken = default)
@@ -147,7 +163,7 @@ public sealed class PluginService(HttpClient http, GitHubService github)
         {
             await using (var input = await http.GetStreamAsync(asset.DownloadUri, cancellationToken))
             await using (var output = File.Create(zipPath)) await input.CopyToAsync(output, cancellationToken);
-            var destination = Path.Combine(airacDirectory, "Plugins", plugin.DestinationFolder);
+            var destination = GetPluginDestination(airacDirectory, plugin);
             Directory.CreateDirectory(destination);
             ZipFile.ExtractToDirectory(zipPath, destination, true);
             var dll = Directory.EnumerateFiles(destination, plugin.PrimaryDll, SearchOption.AllDirectories).FirstOrDefault() ?? throw new InvalidDataException($"The plugin ZIP did not contain {plugin.PrimaryDll}.");
@@ -156,6 +172,23 @@ public sealed class PluginService(HttpClient http, GitHubService github)
         }
         finally { if (File.Exists(zipPath)) File.Delete(zipPath); }
     }
+
+    public void Uninstall(PluginDefinition plugin, string airacDirectory, LauncherSettings settings)
+    {
+        var destination = GetPluginDestination(airacDirectory, plugin);
+        if (Directory.Exists(destination)) Directory.Delete(destination, true);
+        settings.InstalledPlugins.Remove(plugin.Id);
+    }
+
+    public static string GetPluginDestination(string airacDirectory, PluginDefinition plugin)
+    {
+        var folder = Path.GetFileName(plugin.DestinationFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        if (string.IsNullOrWhiteSpace(folder) || !folder.Equals(plugin.DestinationFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.Ordinal))
+            throw new InvalidDataException($"Plugin {plugin.Id} has an unsafe destination folder.");
+        return Path.Combine(airacDirectory, "Plugins", folder);
+    }
+
+    private static PluginCatalog DeserializeCatalog(string json) => JsonSerializer.Deserialize<PluginCatalog>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidDataException("Plugin catalog is invalid.");
 }
 
 public static class ProcessLauncher

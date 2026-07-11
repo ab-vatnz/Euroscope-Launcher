@@ -104,20 +104,65 @@ public partial class MainWindow : Window
     {
         await RunAsync("Loading plugin catalog…", async () =>
         {
-            _catalog = await new PluginService(_http, new GitHubService(_http)).GetCatalogAsync();
-            PluginList.ItemsSource = _catalog.Plugins;
+            var github = new GitHubService(_http);
+            _catalog = await new PluginService(_http, github).GetCatalogAsync();
+            var rows = new List<PluginRow>();
+            foreach (var plugin in _catalog.Plugins)
+            {
+                _settings.InstalledPlugins.TryGetValue(plugin.Id, out var installed);
+                string latest;
+                try { latest = (await github.GetLatestReleaseAsync(plugin.ReleaseApiUrl)).TagName; }
+                catch { latest = "Unable to check"; }
+                rows.Add(new PluginRow
+                {
+                    Definition = plugin,
+                    InstalledVersion = installed ?? "Not installed",
+                    LatestVersion = latest,
+                    InstallAction = installed is null ? "Install" : "Update"
+                });
+            }
+            PluginList.ItemsSource = rows;
         });
     }
 
     private async void InstallPlugin_Click(object sender, RoutedEventArgs e)
     {
-        if (!EnsureEuroScopeExists() || ((sender as FrameworkElement)?.Tag is not PluginDefinition plugin)) return;
+        if (!EnsureEuroScopeExists() || ((sender as FrameworkElement)?.Tag is not PluginRow row)) return;
+        var plugin = row.Definition;
         await RunAsync($"Installing {plugin.DisplayName}…", async () =>
         {
             var dll = await new PluginService(_http, new GitHubService(_http)).InstallAsync(plugin, AiracService.GetAiracDirectory(_settings.EuroScopeExePath), _settings);
             await _settingsStore.SaveAsync(_settings);
             MessageBox.Show($"{plugin.DisplayName} is installed.\n\nOpen EuroScope → Other SET → Plug-ins, load and enable:\n{dll}\n\n{plugin.PostInstallInstructions}", "Enable plugin", MessageBoxButton.OK, MessageBoxImage.Information);
         });
+    }
+
+    private async void UninstallPlugin_Click(object sender, RoutedEventArgs e)
+    {
+        if (!EnsureEuroScopeExists() || ((sender as FrameworkElement)?.Tag is not PluginRow row)) return;
+        var plugin = row.Definition;
+        if (MessageBox.Show($"Uninstall {plugin.DisplayName}? This removes only AIRAC\\Plugins\\{plugin.DestinationFolder}.", "Uninstall plugin", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        await RunAsync($"Uninstalling {plugin.DisplayName}…", async () =>
+        {
+            new PluginService(_http, new GitHubService(_http)).Uninstall(plugin, AiracService.GetAiracDirectory(_settings.EuroScopeExePath), _settings);
+            await _settingsStore.SaveAsync(_settings);
+            await RefreshPluginRowsAsync();
+        });
+    }
+
+    private async Task RefreshPluginRowsAsync()
+    {
+        if (_catalog is null) return;
+        var github = new GitHubService(_http);
+        var rows = new List<PluginRow>();
+        foreach (var plugin in _catalog.Plugins)
+        {
+            _settings.InstalledPlugins.TryGetValue(plugin.Id, out var installed);
+            string latest;
+            try { latest = (await github.GetLatestReleaseAsync(plugin.ReleaseApiUrl)).TagName; } catch { latest = "Unable to check"; }
+            rows.Add(new PluginRow { Definition = plugin, InstalledVersion = installed ?? "Not installed", LatestVersion = latest, InstallAction = installed is null ? "Install" : "Update" });
+        }
+        PluginList.ItemsSource = rows;
     }
 
     private async void CheckAppUpdate_Click(object sender, RoutedEventArgs e) => await CheckAppUpdateAsync(silent: false);
