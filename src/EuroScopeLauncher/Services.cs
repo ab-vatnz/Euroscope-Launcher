@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace EuroScopeLauncher;
@@ -132,8 +133,19 @@ public sealed class GitHubService(HttpClient http)
         return new GitHubRelease(release.TagName, release.Name ?? release.TagName, release.Body ?? "", release.Assets.Select(a => new GitHubAsset(a.Name, new Uri(a.BrowserDownloadUrl))).ToList());
     }
 
-    private sealed class GitHubReleaseDto { public string TagName { get; set; } = ""; public string? Name { get; set; } public string? Body { get; set; } public List<AssetDto> Assets { get; set; } = []; }
-    private sealed class AssetDto { public string Name { get; set; } = ""; public string BrowserDownloadUrl { get; set; } = ""; }
+    private sealed class GitHubReleaseDto
+    {
+        [JsonPropertyName("tag_name")] public string TagName { get; set; } = "";
+        [JsonPropertyName("name")] public string? Name { get; set; }
+        [JsonPropertyName("body")] public string? Body { get; set; }
+        [JsonPropertyName("assets")] public List<AssetDto> Assets { get; set; } = [];
+    }
+
+    private sealed class AssetDto
+    {
+        [JsonPropertyName("name")] public string Name { get; set; } = "";
+        [JsonPropertyName("browser_download_url")] public string BrowserDownloadUrl { get; set; } = "";
+    }
 }
 
 public sealed class PluginService(HttpClient http, GitHubService github)

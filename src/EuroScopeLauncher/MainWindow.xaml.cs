@@ -233,7 +233,16 @@ public partial class MainWindow : Window
     {
         await RunAsync("Checking launcher updates…", async () =>
         {
-            var release = await new GitHubService(_http).GetLatestReleaseAsync("https://api.github.com/repos/ab-vatnz/Euroscope-Launcher/releases/latest");
+            GitHubRelease release;
+            try
+            {
+                release = await new GitHubService(_http).GetLatestReleaseAsync("https://api.github.com/repos/ab-vatnz/Euroscope-Launcher/releases/latest");
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                if (!silent) MessageBox.Show("No launcher release has been published yet.", "Launcher updates", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
             var current = typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
             if (release.TagName.TrimStart('v').Equals(current, StringComparison.OrdinalIgnoreCase)) { if (!silent) MessageBox.Show("The launcher is current."); return; }
             StatusText.Text = $"Launcher update available: {release.Name}";
