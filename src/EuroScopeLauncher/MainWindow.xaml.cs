@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace EuroScopeLauncher;
 
@@ -12,6 +13,7 @@ public partial class MainWindow : Window
     private readonly HttpClient _http = new();
     private readonly SettingsStore _settingsStore = new();
     private readonly AiracService _airac = new();
+    private readonly DispatcherTimer _pluginRefreshTimer = new() { Interval = TimeSpan.FromMinutes(15) };
     private LauncherSettings _settings = new();
     private PluginCatalog? _catalog;
 
@@ -19,6 +21,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Loaded += async (_, _) => await InitializeAsync();
+        _pluginRefreshTimer.Tick += async (_, _) => await LoadPluginsAsync(showErrors: false);
     }
 
     private async Task InitializeAsync()
@@ -40,6 +43,8 @@ public partial class MainWindow : Window
                 UpdateAiracStatus();
             }
         }
+        await LoadPluginsAsync(showErrors: false);
+        _pluginRefreshTimer.Start();
         try { await CheckAppUpdateAsync(silent: true); } catch { /* A network error must not block controller setup. */ }
     }
 
@@ -75,13 +80,14 @@ public partial class MainWindow : Window
         ProfileVersionText.Text = version;
     }
 
-    private void Nav_Click(object sender, RoutedEventArgs e)
+    private async void Nav_Click(object sender, RoutedEventArgs e)
     {
         var page = (sender as FrameworkElement)?.Tag?.ToString();
         HomeView.Visibility = page == "Home" ? Visibility.Visible : Visibility.Collapsed;
         ProfilesView.Visibility = page == "Profiles" ? Visibility.Visible : Visibility.Collapsed;
         PluginsView.Visibility = page == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
         SetupView.Visibility = page == "Setup" ? Visibility.Visible : Visibility.Collapsed;
+        if (page == "Plugins") await LoadPluginsAsync(showErrors: false);
     }
 
     private async void Browse_Click(object sender, RoutedEventArgs e)
@@ -164,27 +170,7 @@ public partial class MainWindow : Window
 
     private async void RefreshPlugins_Click(object sender, RoutedEventArgs e)
     {
-        await RunAsync("Loading plugin catalog…", async () =>
-        {
-            var github = new GitHubService(_http);
-            _catalog = await new PluginService(_http, github).GetCatalogAsync();
-            var rows = new List<PluginRow>();
-            foreach (var plugin in _catalog.Plugins)
-            {
-                _settings.InstalledPlugins.TryGetValue(plugin.Id, out var installed);
-                string latest;
-                try { latest = (await github.GetLatestReleaseAsync(plugin.ReleaseApiUrl)).TagName; }
-                catch { latest = "Unable to check"; }
-                rows.Add(new PluginRow
-                {
-                    Definition = plugin,
-                    InstalledVersion = installed ?? "Not installed",
-                    LatestVersion = latest,
-                    InstallAction = installed is null ? "Install" : "Update"
-                });
-            }
-            PluginList.ItemsSource = rows;
-        });
+        await LoadPluginsAsync(showErrors: true);
     }
 
     private async void InstallPlugin_Click(object sender, RoutedEventArgs e)
@@ -225,6 +211,23 @@ public partial class MainWindow : Window
             rows.Add(new PluginRow { Definition = plugin, InstalledVersion = installed ?? "Not installed", LatestVersion = latest, InstallAction = installed is null ? "Install" : "Update" });
         }
         PluginList.ItemsSource = rows;
+    }
+
+    private async Task LoadPluginsAsync(bool showErrors)
+    {
+        try
+        {
+            StatusText.Text = "Refreshing plugins…";
+            var github = new GitHubService(_http);
+            _catalog = await new PluginService(_http, github).GetCatalogAsync();
+            await RefreshPluginRowsAsync();
+            StatusText.Text = "Ready.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "Plugin refresh unavailable.";
+            if (showErrors) MessageBox.Show(ex.Message, "Plugin refresh", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private async void CheckAppUpdate_Click(object sender, RoutedEventArgs e) => await CheckAppUpdateAsync(silent: false);
