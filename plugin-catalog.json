@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "plugins": [
+    {
+      "id": "ozstrips-euroscope",
+      "displayName": "OzStrips EuroScope",
+      "releaseApiUrl": "https://api.github.com/repos/ab-vatnz/Ozstrips-euroscope/releases/latest",
+      "assetNamePattern": "^OzStripsEuroScope-.*\\.zip$",
+      "destinationFolder": "OzStripsEuroScope",
+      "primaryDll": "OzStripsEuroScope.dll",
+      "postInstallInstructions": "After connecting, type .ozstrips to open the stripboard.",
+      "versionStrategy": "github-release-tag"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>EuroScopeLauncher</AssemblyName>
+    <RootNamespace>EuroScopeLauncher</RootNamespace>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\..\plugin-catalog.json" Link="plugin-catalog.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
