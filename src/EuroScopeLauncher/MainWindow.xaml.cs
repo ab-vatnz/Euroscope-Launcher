@@ -32,7 +32,7 @@ public partial class MainWindow : Window
         var airac = AiracService.GetAiracDirectory(_settings.EuroScopeExePath);
         var legacy = _airac.FindLegacySkylineFolders(_settings.EuroScopeExePath);
         AiracStatusText.Text = $"Managed AIRAC folder: {airac}\nInstalled AIRAC: {_settings.AiracVersion ?? "not installed"}." +
-            (legacy.Count > 0 ? $"\nLegacy SkyLine package found: {string.Join(", ", legacy.Select(Path.GetFileName))}. Back it up, then move any controller-specific files you want to keep into AIRAC. It will not be removed automatically." : "");
+            (legacy.Count > 0 ? $"\nLegacy SkyLine package found: {string.Join(", ", legacy.Select(Path.GetFileName))}. Back it up, then move its Settings folder and any other controller-specific files you want to keep into AIRAC before setup. The launcher will never replace or update AIRAC\\Settings, and it will not remove the old package." : "");
     }
 
     private async void Browse_Click(object sender, RoutedEventArgs e)

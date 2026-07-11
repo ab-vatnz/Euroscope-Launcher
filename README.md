@@ -6,7 +6,7 @@ Windows launcher for the VATNZ EuroScope package. It manages a single shared `AI
 
 1. Download `EuroScopeLauncher-Setup.exe` from this repository's GitHub Releases and run it.
 2. Start **EuroScope Launcher**. It defaults to `C:\Program Files (x86)\EuroScope\EuroScope.exe`; browse to the executable if yours differs.
-3. If a `VATNZ-SKYLINE_*` folder is detected, back it up. Move or copy controller-specific files you want to retain into `C:\Program Files (x86)\EuroScope\AIRAC`. The launcher never deletes the old package.
+3. If a `VATNZ-SKYLINE_*` folder is detected, back it up. Move or copy its `Settings` folder and any controller-specific files you want to retain into `C:\Program Files (x86)\EuroScope\AIRAC`. The launcher never deletes the old package or replaces/updates an existing `AIRAC\Settings` folder.
 4. Select **First-time SkyLine setup**. For an empty AIRAC folder it downloads the current VATNZ SkyLine package and asks whether to copy its `VATNZ.prf`. If you have already migrated files into AIRAC, it preserves them and installs only the current SCT2, ESE, and RWY files.
 5. In EuroScope, select the SCT2 file from `AIRAC` before connecting.
 
