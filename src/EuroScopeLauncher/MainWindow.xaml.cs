@@ -1,7 +1,6 @@
 using Microsoft.Win32;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Windows.Threading;
 
 namespace EuroScopeLauncher;
 
@@ -10,7 +9,6 @@ public partial class MainWindow : Window
     private readonly HttpClient _http = new();
     private readonly SettingsStore _settingsStore = new();
     private readonly AiracService _airac = new();
-    private readonly DispatcherTimer _pluginRefreshTimer = new() { Interval = TimeSpan.FromMinutes(15) };
     private LauncherSettings _settings = new();
     private PluginCatalog? _catalog;
 
@@ -18,7 +16,6 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Loaded += async (_, _) => await InitializeAsync();
-        _pluginRefreshTimer.Tick += async (_, _) => await LoadPluginsAsync(showErrors: false);
     }
 
     private async Task InitializeAsync()
@@ -41,7 +38,6 @@ public partial class MainWindow : Window
         }
         await LoadPluginsAsync(showErrors: false);
         await RefreshProfileAvailabilityAsync();
-        _pluginRefreshTimer.Start();
         try { await CheckAppUpdateAsync(silent: true); } catch { /* A network error must not block controller setup. */ }
     }
 

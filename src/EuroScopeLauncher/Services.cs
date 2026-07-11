@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
 
 namespace EuroScopeLauncher;
 
@@ -120,17 +121,51 @@ public sealed class AiracService
 public sealed class GitHubService(HttpClient http)
 {
     private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
+    private static readonly ConcurrentDictionary<string, (GitHubRelease Release, DateTimeOffset ExpiresAt)> ReleaseCache = new(StringComparer.OrdinalIgnoreCase);
 
     public async Task<GitHubRelease> GetLatestReleaseAsync(string apiUrl, CancellationToken cancellationToken = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+        if (ReleaseCache.TryGetValue(apiUrl, out var cached) && cached.ExpiresAt > DateTimeOffset.UtcNow) return cached.Release;
+        GitHubRelease result;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+            request.Headers.UserAgent.Add(new ProductInfoHeaderValue("EuroScopeLauncher", "1.0"));
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+            using var response = await http.SendAsync(request, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var release = await JsonSerializer.DeserializeAsync<GitHubReleaseDto>(stream, Options, cancellationToken) ?? throw new InvalidDataException("Invalid GitHub release response.");
+            result = new GitHubRelease(release.TagName, release.Name ?? release.TagName, release.Body ?? "", release.Assets.Select(a => new GitHubAsset(a.Name, new Uri(a.BrowserDownloadUrl))).ToList());
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            result = await GetLatestReleaseFromPageAsync(apiUrl, cancellationToken);
+        }
+        ReleaseCache[apiUrl] = (result, DateTimeOffset.UtcNow.AddHours(1));
+        return result;
+    }
+
+    private async Task<GitHubRelease> GetLatestReleaseFromPageAsync(string apiUrl, CancellationToken cancellationToken)
+    {
+        var match = Regex.Match(apiUrl, @"repos/(?<owner>[^/]+)/(?<repo>[^/]+)/releases/latest", RegexOptions.IgnoreCase);
+        if (!match.Success) throw new InvalidOperationException("GitHub release source is invalid.");
+        var owner = match.Groups["owner"].Value;
+        var repo = match.Groups["repo"].Value;
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"https://github.com/{owner}/{repo}/releases/latest");
         request.Headers.UserAgent.Add(new ProductInfoHeaderValue("EuroScopeLauncher", "1.0"));
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         using var response = await http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var release = await JsonSerializer.DeserializeAsync<GitHubReleaseDto>(stream, Options, cancellationToken) ?? throw new InvalidDataException("Invalid GitHub release response.");
-        return new GitHubRelease(release.TagName, release.Name ?? release.TagName, release.Body ?? "", release.Assets.Select(a => new GitHubAsset(a.Name, new Uri(a.BrowserDownloadUrl))).ToList());
+        var html = await response.Content.ReadAsStringAsync(cancellationToken);
+        var tag = response.RequestMessage?.RequestUri?.Segments.LastOrDefault()?.TrimEnd('/') ?? "latest";
+        var assetPattern = $"href=[\"'](?<url>/{Regex.Escape(owner)}/{Regex.Escape(repo)}/releases/download/[^\"']+/[^\"']+)[\"']";
+        var assets = Regex.Matches(html, assetPattern, RegexOptions.IgnoreCase)
+            .Select(m => System.Net.WebUtility.HtmlDecode(m.Groups["url"].Value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(url => new GitHubAsset(Path.GetFileName(new Uri("https://github.com" + url).AbsolutePath), new Uri("https://github.com" + url)))
+            .ToList();
+        if (assets.Count == 0) throw new InvalidOperationException("GitHub rate limit reached and no release assets could be read from the public release page. Please try again later.");
+        return new GitHubRelease(tag, tag, "", assets);
     }
 
     private sealed class GitHubReleaseDto
