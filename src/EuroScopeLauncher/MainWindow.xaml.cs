@@ -254,7 +254,20 @@ public partial class MainWindow : Window
             {
                 var installer = release.Assets.FirstOrDefault(a => a.Name.EndsWith("-Setup.exe", StringComparison.OrdinalIgnoreCase));
                 if (installer is null) throw new InvalidOperationException("The release does not include a Setup installer.");
-                Process.Start(new ProcessStartInfo(installer.DownloadUri.ToString()) { UseShellExecute = true });
+                StatusText.Text = "Downloading launcher update…";
+                var updateDirectory = Path.Combine(Path.GetTempPath(), "EuroScopeLauncher", "Updates");
+                Directory.CreateDirectory(updateDirectory);
+                var installerPath = Path.Combine(updateDirectory, installer.Name);
+                var temporaryPath = installerPath + ".download";
+                await using (var source = await _http.GetStreamAsync(installer.DownloadUri))
+                await using (var destination = File.Create(temporaryPath)) await source.CopyToAsync(destination);
+                File.Move(temporaryPath, installerPath, true);
+                Process.Start(new ProcessStartInfo(installerPath)
+                {
+                    UseShellExecute = true,
+                    Arguments = "/CLOSEAPPLICATIONS"
+                });
+                Application.Current.Shutdown();
             }
         });
     }
