@@ -10,6 +10,16 @@
       "primaryDll": "OzStripsEuroScope.dll",
       "postInstallInstructions": "After connecting, type .ozstrips to open the stripboard.",
       "versionStrategy": "github-release-tag"
+    },
+    {
+      "id": "discord-euroscope",
+      "displayName": "DiscordEuroScope",
+      "releaseApiUrl": "https://api.github.com/repos/Kirollos/DiscordEuroscope/releases/latest",
+      "assetNamePattern": ".*\\.zip$",
+      "destinationFolder": "DiscordEuroscope",
+      "primaryDll": "DiscordEuroscope.dll",
+      "postInstallInstructions": "Open EuroScope → Other SET → Plug-ins, load DiscordEuroscope.dll, and enable it. Discord Rich Presence starts automatically.",
+      "versionStrategy": "github-release-tag"
     }
   ]
 }
