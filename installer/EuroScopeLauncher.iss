@@ -13,6 +13,7 @@ DefaultDirName={autopf}\EuroScope Launcher
 DefaultGroupName={#MyAppName}
 OutputDir=..\artifacts
 OutputBaseFilename=EuroScopeLauncher-Setup
+SetupIconFile=..\assets\EuroScope.ico
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=lowest

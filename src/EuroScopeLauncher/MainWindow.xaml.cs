@@ -1,9 +1,6 @@
 using Microsoft.Win32;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Windows.Interop;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace EuroScopeLauncher;
@@ -28,7 +25,6 @@ public partial class MainWindow : Window
     {
         _settings = await _settingsStore.LoadAsync();
         EuroScopePathBox.Text = _settings.EuroScopeExePath;
-        LoadEuroScopeIcon();
         VersionText.Text = $"Version {typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "1.0.0"}";
         UpdateAiracStatus();
         if (!_settings.SetupWizardCompleted)
@@ -49,26 +45,6 @@ public partial class MainWindow : Window
         try { await CheckAppUpdateAsync(silent: true); } catch { /* A network error must not block controller setup. */ }
     }
 
-    private void LoadEuroScopeIcon()
-    {
-        if (!File.Exists(_settings.EuroScopeExePath)) return;
-        var largeIcons = new[] { IntPtr.Zero };
-        if (ExtractIconEx(_settings.EuroScopeExePath, 0, largeIcons, null, 1) == 0 || largeIcons[0] == IntPtr.Zero) return;
-        try
-        {
-            var image = Imaging.CreateBitmapSourceFromHIcon(largeIcons[0], Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-            image.Freeze();
-            Icon = image;
-            EuroScopeLogo.Source = image;
-        }
-        finally { DestroyIcon(largeIcons[0]); }
-    }
-
-    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-    private static extern uint ExtractIconEx(string fileName, int iconIndex, IntPtr[]? largeIcons, IntPtr[]? smallIcons, uint iconCount);
-
-    [DllImport("user32.dll")]
-    private static extern bool DestroyIcon(IntPtr iconHandle);
 
     private void UpdateAiracStatus()
     {
@@ -97,7 +73,6 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog() != true) return;
         _settings.EuroScopeExePath = dialog.FileName;
         EuroScopePathBox.Text = dialog.FileName;
-        LoadEuroScopeIcon();
         await _settingsStore.SaveAsync(_settings);
         UpdateAiracStatus();
     }
