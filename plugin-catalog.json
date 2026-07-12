@@ -18,7 +18,7 @@
       "assetNamePattern": ".*\\.zip$",
       "destinationFolder": "DiscordEuroscope",
       "primaryDll": "DiscordEuroscope.dll",
-      "postInstallInstructions": "Open EuroScope → Other SET → Plug-ins, load DiscordEuroscope.dll, and enable it. Discord Rich Presence starts automatically.",
+      "postInstallInstructions": "Discord Rich Presence for EuroScope.",
       "versionStrategy": "github-release-tag"
     }
   ]
