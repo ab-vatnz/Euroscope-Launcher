@@ -9,6 +9,16 @@ public partial class MainWindow : Window
     private readonly HttpClient _http = new();
     private readonly SettingsStore _settingsStore = new();
     private readonly AiracService _airac = new();
+    private static readonly ProfileDefinition[] ProfileCatalog =
+    [
+        new ProfileDefinition
+        {
+            Id = "vatnz-nzzc",
+            DisplayName = "New Zealand",
+            ShortName = "NZZC",
+            Description = "VATNZ domestic EuroScope sector files."
+        }
+    ];
     private LauncherSettings _settings = new();
     private PluginCatalog? _catalog;
 
@@ -37,7 +47,7 @@ public partial class MainWindow : Window
             }
         }
         await LoadPluginsAsync(showErrors: false);
-        await RefreshProfileAvailabilityAsync();
+        await RefreshProfilesAsync();
         try { await CheckAppUpdateAsync(silent: true); } catch { /* A network error must not block controller setup. */ }
     }
 
@@ -50,7 +60,6 @@ public partial class MainWindow : Window
             (legacy.Count > 0 ? $"\nLegacy SkyLine package found: {string.Join(", ", legacy.Select(Path.GetFileName))}. Back it up, then move its Settings folder and any other controller-specific files you want to keep into AIRAC before setup. The launcher will never replace or update AIRAC\\Settings, and it will not remove the old package." : "");
         var version = _settings.AiracVersion ?? "Not installed";
         HomeAiracText.Text = $"AIRAC {version}";
-        ProfileVersionText.Text = $"Installed\n{version}";
     }
 
     private async void Nav_Click(object sender, RoutedEventArgs e)
@@ -61,6 +70,7 @@ public partial class MainWindow : Window
         PluginsView.Visibility = page == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
         SetupView.Visibility = page == "Setup" ? Visibility.Visible : Visibility.Collapsed;
         if (page == "Plugins") await LoadPluginsAsync(showErrors: false);
+        if (page == "Profiles") await RefreshProfilesAsync();
     }
 
     private async void Browse_Click(object sender, RoutedEventArgs e)
@@ -115,7 +125,7 @@ public partial class MainWindow : Window
             finally { File.Delete(zip); }
             await _settingsStore.SaveAsync(_settings);
             UpdateAiracStatus();
-            await RefreshProfileAvailabilityAsync();
+            await RefreshProfilesAsync();
             MessageBox.Show("SkyLine setup is complete. Before launching EuroScope, select the SCT2 file in the AIRAC folder.", "Setup complete", MessageBoxButton.OK, MessageBoxImage.Information);
         });
     }
@@ -139,7 +149,7 @@ public partial class MainWindow : Window
             finally { File.Delete(zip); }
             await _settingsStore.SaveAsync(_settings);
             UpdateAiracStatus();
-            await RefreshProfileAvailabilityAsync();
+            await RefreshProfilesAsync();
             MessageBox.Show("AIRAC updated. Select the new SCT2 file from AIRAC in EuroScope before launching.", "AIRAC updated", MessageBoxButton.OK, MessageBoxImage.Information);
         });
     }
@@ -215,20 +225,32 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task RefreshProfileAvailabilityAsync()
+    private async void RefreshProfiles_Click(object sender, RoutedEventArgs e) => await RefreshProfilesAsync();
+
+    private void InstallProfile_Click(object sender, RoutedEventArgs e)
     {
+        if ((sender as FrameworkElement)?.Tag is not ProfileRow row || row.Definition.Id != "vatnz-nzzc") return;
+        UpdateAirac_Click(sender, e);
+    }
+
+    private async Task RefreshProfilesAsync()
+    {
+        var installed = _settings.AiracVersion ?? "Not installed";
+        string latest;
         try
         {
-            var latest = await new VatnzService(_http).GetCurrentPackageAsync(skyline: false);
-            var installed = _settings.AiracVersion;
-            ProfileVersionText.Text = $"Installed\n{installed ?? "None"}\nLatest\n{latest.Version}";
-            ProfileUpdateButton.IsEnabled = installed is null || !installed.Equals(latest.Version, StringComparison.OrdinalIgnoreCase);
+            latest = (await new VatnzService(_http).GetCurrentPackageAsync(skyline: false)).Version;
         }
         catch
         {
-            // A failed version check must never prevent a manual update.
-            ProfileUpdateButton.IsEnabled = true;
+            latest = "Unable to check";
         }
+        ProfileList.ItemsSource = ProfileCatalog.Select(profile => new ProfileRow
+        {
+            Definition = profile,
+            InstalledVersion = installed,
+            LatestVersion = latest
+        }).ToList();
     }
 
     private async void CheckAppUpdate_Click(object sender, RoutedEventArgs e) => await CheckAppUpdateAsync(silent: false);

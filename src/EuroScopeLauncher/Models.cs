@@ -42,5 +42,25 @@ public sealed class PluginRow
     public bool CanInstallOrUpdate => !IsInstalled || LatestVersion == "Unable to check" || !InstalledVersion.Equals(LatestVersion, StringComparison.OrdinalIgnoreCase);
 }
 
+public sealed class ProfileDefinition
+{
+    public string Id { get; init; } = "";
+    public string DisplayName { get; init; } = "";
+    public string ShortName { get; init; } = "";
+    public string Description { get; init; } = "";
+}
+
+public sealed class ProfileRow
+{
+    public required ProfileDefinition Definition { get; init; }
+    public string DisplayName => Definition.DisplayName;
+    public string ShortName => Definition.ShortName;
+    public string Description => Definition.Description;
+    public string InstalledVersion { get; init; } = "Not installed";
+    public string LatestVersion { get; init; } = "Unable to check";
+    public string InstallAction => InstalledVersion == "Not installed" ? "Install" : InstalledVersion.Equals(LatestVersion, StringComparison.OrdinalIgnoreCase) ? "Current" : "Update";
+    public bool CanInstallOrUpdate => InstalledVersion == "Not installed" || LatestVersion == "Unable to check" || !InstalledVersion.Equals(LatestVersion, StringComparison.OrdinalIgnoreCase);
+}
+
 public sealed record GitHubRelease(string TagName, string Name, string Body, IReadOnlyList<GitHubAsset> Assets);
 public sealed record GitHubAsset(string Name, Uri DownloadUri);
