@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using System.Security.Principal;
+using System.Runtime.InteropServices;
 
 namespace EuroScopeLauncher;
 
@@ -7,8 +7,13 @@ public static class Elevation
 {
     public static bool IsAdministrator()
     {
-        using var identity = WindowsIdentity.GetCurrent();
-        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+        const uint tokenQuery = 0x0008;
+        if (!OpenProcessToken(Process.GetCurrentProcess().Handle, tokenQuery, out var token)) return false;
+        try
+        {
+            return GetTokenInformation(token, TokenInformationClass.TokenElevation, out TokenElevation elevation, Marshal.SizeOf<TokenElevation>(), out _) && elevation.TokenIsElevated != 0;
+        }
+        finally { CloseHandle(token); }
     }
 
     public static bool RestartForWrite(Window owner)
@@ -27,4 +32,18 @@ public static class Elevation
             return false;
         }
     }
+
+    private enum TokenInformationClass { TokenElevation = 20 }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct TokenElevation { public int TokenIsElevated; }
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool OpenProcessToken(IntPtr processHandle, uint desiredAccess, out IntPtr tokenHandle);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool GetTokenInformation(IntPtr tokenHandle, TokenInformationClass informationClass, out TokenElevation tokenInformation, int tokenInformationLength, out int returnLength);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr handle);
 }

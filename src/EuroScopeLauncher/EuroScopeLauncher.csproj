@@ -8,7 +8,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>EuroScopeLauncher</AssemblyName>
     <RootNamespace>EuroScopeLauncher</RootNamespace>
-    <Version>1.0.7</Version>
+    <Version>1.0.8</Version>
     <ApplicationIcon>..\..\assets\EuroScope.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
