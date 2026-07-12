@@ -75,6 +75,7 @@ public partial class MainWindow : Window
 
     private async void Setup_Click(object sender, RoutedEventArgs e)
     {
+        if (!Elevation.RestartForWrite(this)) return;
         if (!EnsureEuroScopeExists()) return;
         var airacDirectory = AiracService.GetAiracDirectory(_settings.EuroScopeExePath);
         var legacyFolders = _airac.FindLegacySkylineFolders(_settings.EuroScopeExePath);
@@ -121,6 +122,7 @@ public partial class MainWindow : Window
 
     private async void UpdateAirac_Click(object sender, RoutedEventArgs e)
     {
+        if (!Elevation.RestartForWrite(this)) return;
         if (!EnsureEuroScopeExists()) return;
         await RunAsync("Checking VATNZ sector files…", async () =>
         {
@@ -149,6 +151,7 @@ public partial class MainWindow : Window
 
     private async void InstallPlugin_Click(object sender, RoutedEventArgs e)
     {
+        if (!Elevation.RestartForWrite(this)) return;
         if (!EnsureEuroScopeExists() || ((sender as FrameworkElement)?.Tag is not PluginRow row)) return;
         var plugin = row.Definition;
         await RunAsync($"Installing {plugin.DisplayName}…", async () =>
@@ -162,6 +165,7 @@ public partial class MainWindow : Window
 
     private async void UninstallPlugin_Click(object sender, RoutedEventArgs e)
     {
+        if (!Elevation.RestartForWrite(this)) return;
         if (!EnsureEuroScopeExists() || ((sender as FrameworkElement)?.Tag is not PluginRow row)) return;
         var plugin = row.Definition;
         if (MessageBox.Show($"Uninstall {plugin.DisplayName}? This removes only AIRAC\\Plugins\\{plugin.DestinationFolder}.", "Uninstall plugin", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;

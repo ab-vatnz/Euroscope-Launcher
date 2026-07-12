@@ -21,6 +21,9 @@ PrivilegesRequired=admin
 [Files]
 Source: "..\src\EuroScopeLauncher\bin\Release\net8.0-windows\win-x64\publish\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
+[Dirs]
+Name: "{commonappdata}\EuroScopeLauncher"; Permissions: users-modify
+
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

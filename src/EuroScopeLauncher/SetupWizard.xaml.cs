@@ -31,6 +31,7 @@ public partial class SetupWizard : Window
         {
             EuroScopePath = PathBox.Text;
             if (!File.Exists(EuroScopePath)) { MessageBox.Show("Select a valid EuroScope.exe before continuing."); return; }
+            if (!Elevation.RestartForWrite(this)) return;
             Directory.CreateDirectory(AiracService.GetAiracDirectory(EuroScopePath));
         }
         if (_step == 2)
